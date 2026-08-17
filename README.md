@@ -41,7 +41,9 @@ To begin the hunt, CloudTrail logs were queried to get a baseline view of API ac
 index=botsv3 sourcetype="aws:cloudtrail" earliest=0 | stats count by eventName | sort - count
 ```
 ![Step 1 command](screenshots/ss1.png)
-This surfaced several event types that stood out as worth investigating further: GetCallerIdentity, ListFindings, DescribeInstances, and ListAccessKeys. These are commonly associated with attacker reconnaissance activity in cloud environments: identity verification, infrastructure discovery, and credential enumeration.
+
+
+This surfaced several event types that stood out as worth investigating further: `GetCallerIdentity`, `ListFindings`, `DescribeInstances`, and `ListAccessKeys`. These are commonly associated with attacker reconnaissance activity in cloud environments: identity verification, infrastructure discovery, and credential enumeration.
 
 ![Step 1 result](screenshots/ss2.png)
 
