@@ -1,6 +1,6 @@
 # SPL Queries Reference
 
-All queries below were run against `index=botsv3` in Splunk Enterprise as part of the T1078.004 (Valid Accounts: Cloud Accounts) threat hunt. See the main [README]([../README.md](https://github.com/Amal-shaji7/soc-splunk-botsv3/blob/main/README.md)) for full investigation narrative and findings.
+All queries below were run against `index=botsv3` in Splunk Enterprise as part of the T1078.004 (Valid Accounts: Cloud Accounts) threat hunt. See the main [README](https://github.com/Amal-shaji7/soc-splunk-botsv3/blob/main/README.md) for full investigation narrative and findings.
 
 ## 1. Establishing a CloudTrail Baseline
 
