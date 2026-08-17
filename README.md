@@ -38,9 +38,12 @@ The hunt focuses on AWS CloudTrail logs within the BOTSv3 dataset to identify an
 To begin the hunt, CloudTrail logs were queried to get a baseline view of API activity within the environment.
 
 ```spl
-index=botsv3 sourcetype="aws:cloudtrail" | stats count by eventName | sort - count
+index=botsv3 sourcetype="aws:cloudtrail" earliest=0 | stats count by eventName | sort - count
 ```
+![Step 1 command](screenshots/ss1.png)
 This surfaced several event types that stood out as worth investigating further: GetCallerIdentity, ListFindings, DescribeInstances, and ListAccessKeys. These are commonly associated with attacker reconnaissance activity in cloud environments: identity verification, infrastructure discovery, and credential enumeration.
+
+![Step 1 result](screenshots/ss2.png)
 
 ### Step 2 — Pivoting on Suspicious Events
 
@@ -50,6 +53,8 @@ The four flagged event names were then correlated against user identity, source 
 index=botsv3 sourcetype="aws:cloudtrail" eventName IN ("GetCallerIdentity", "ListFindings", "DescribeInstances", "ListAccessKeys") | stats count values(eventName) as actions by userIdentity.userName sourceIPAddress userAgent | sort - count
 ```
 
+![Step 2 command](screenshots/ss3.png)
+
 This identified the user `web_admin` as the most suspicious actor, for two reasons:
 
  1. **Anomalous tooling** — rather than using the AWS Management Console (the expected interface for this type of account), the actor's requests originated from a Python script using the boto3 SDK, visible via the userAgent field.
@@ -57,7 +62,8 @@ This identified the user `web_admin` as the most suspicious actor, for two reaso
 
 The sequence of actions itself followed a recognizable reconnaissance pattern consistent with T1078.004: the actor first confirmed their own identity and privileges (`GetCallerIdentity`), then enumerated running EC2 infrastructure (`DescribeInstances`), then queried IAM credentials tied to the account (`ListAccessKeys`).
 
-[Screenshot: step2_user_ip_pivot.png]
+![Step 2 result](screenshots/ss4.png)
+
 
 ### Step 3 — Drilling Down: Success - Failure Analysis
 
@@ -71,6 +77,7 @@ index=botsv3 sourcetype="aws:cloudtrail" userIdentity.userName="web_admin"
 | stats count by eventName status errorCode errorMessage
 | sort eventName - count
 ```
+![Step 3 command and result](screenshots/ss5.png)
 
 This returned 646 total API calls attributed to web_admin. The majority failed, but a handful succeeded — most notably `GetCallerIdentity` (16 calls, success) and `GetSessionToken` (1 call, success). The failed attempts included `RunInstances` (576 calls), `CreateDefaultVpc` (15 calls), `DescribeKeyPairs` (15 calls), `DescribeInstances` (15 calls), `DeleteAccessKey` (1 call), and several others.
 
@@ -90,12 +97,26 @@ To confirm the scope and timeline of the actor's active access, the successful `
 index=botsv3 sourcetype="aws:cloudtrail" eventName="GetSessionToken" userIdentity.userName="web_admin"
 | table _time sourceIPAddress userAgent userIdentity.accessKeyId responseElements.credentials.accessKeyId responseElements.credentials.expiration
 ```
+![Step 4 command and result](screenshots/ss6.png)
 
 This confirmed the adversary actively used a minted AWS STS temporary token (`ASIA...`) to execute commands within a defined window, between **09:16:14 UTC and 09:28:54 UTC**.
 
 [Screenshot: step4_session_token_trace.png]
 
-## Section 4: Findings & Verdict
+## Step 5 — Reconstructing the Session Activity Timeline
+
+With the temporary session token identified, the final step was to reconstruct exactly what the actor did while that token was active — building a full chronological timeline of actions tied to the stolen session.
+
+```spl
+index=botsv3 sourcetype="aws:cloudtrail" userIdentity.accessKeyId='ASIA*' 
+| table _time sourceIPAddress eventName errorCode errorMessage
+| sort _time
+```
+![Step 5 session activity timeline](screenshots/ss7.png)
+
+This produced a complete, time-ordered record of every action taken under the compromised session token, tying together the identity confirmation, persistence attempts, and resource abuse attempts documented in Steps 3 and 4 into a single verifiable attack timeline.
+
+## Findings & Verdict
 
 | Field | Detail |
 |---|---|
@@ -110,9 +131,9 @@ This confirmed the adversary actively used a minted AWS STS temporary token (`AS
 
 ### Immediate Remediation / IR Handover Checklist
 
-- Deactivate and delete the compromised static access key (`AKIA...`) on the `web_admin` user
-- Invalidate all active AWS STS temporary session tokens (`ASIA...`) to sever the adversary's active connection
-- Implement IAM boundary policies restricting programmatic `sts: GetSessionToken` calls to approved internal IP ranges or requiring Multi-Factor Authentication (MFA)
+- Deactivate and delete the compromised static access key (`AKIA...`) on the `web_admin` user.
+-  Invalidate all active AWS STS temporary session tokens (`ASIA...`) to sever the adversary's active connection.
+-  Implement IAM boundary policies restricting programmatic `sts:GetSessionToken` calls to approved internal IP ranges or requiring Multi-Factor Authentication (MFA)
 
 
 ## Repository Structure
@@ -123,8 +144,11 @@ soc-splunk-botsv3/
 ├── queries/
 │   └── spl_queries.md
 └── screenshots/
-    ├── step1_event_enumeration.png
-    ├── step2_user_ip_pivot.png
-    ├── step3_success_failure_breakdown.png
-    └── step4_session_token_trace.png
+    ├── ss1
+    ├── ss2
+    ├── ss3
+    ├── ss4
+    ├── ss5
+    ├── ss6
+    └── ss7
 ```
