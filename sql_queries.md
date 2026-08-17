@@ -1,13 +1,13 @@
 # SPL Queries Reference
 
-All queries below were run against `index=botsv3` in Splunk Enterprise as part of the T1078.004 (Valid Accounts: Cloud Accounts) threat hunt. See the main [README](../README.md) for full investigation narrative and findings.
+All queries below were run against `index=botsv3` in Splunk Enterprise as part of the T1078.004 (Valid Accounts: Cloud Accounts) threat hunt. See the main [README]([../README.md](https://github.com/Amal-shaji7/soc-splunk-botsv3/blob/main/README.md)) for full investigation narrative and findings.
 
 ## 1. Establishing a CloudTrail Baseline
 
 Establishes a baseline view of API activity to identify event types worth investigating.
 
 ```spl
-index=botsv3 sourcetype="aws:cloudtrail" | stats count by eventName | sort - count
+index=botsv3 sourcetype="aws:cloudtrail" earliest=0 | stats count by eventName | sort - count
 ```
 
 ## 2. Pivoting from Events to Identity
