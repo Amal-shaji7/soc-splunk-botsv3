@@ -4,7 +4,7 @@
 
 ## Overview
 
-This project simulates a real-world Security Operations Center (SOC) threat hunting exercise using Splunk Enterprise and the Splunk BOTSv3 (Boss of the SOC Version 3) dataset — a publicly available, pre-indexed dataset containing a full day of real enterprise attack telemetry.
+This project simulates a real-world Security Operations Center (SOC) threat hunting exercise using Splunk Enterprise and the Splunk BOTSv3 (Boss of the SOC Version 3) dataset, a publicly available, pre-indexed dataset containing a full day of real enterprise attack telemetry.
 
 The goal is to move beyond passive alert triage and demonstrate hypothesis-driven, proactive threat hunting: formulating a detection hypothesis grounded in the MITRE ATT&CK framework, querying relevant logs using Splunk Query Language (SPL), isolating anomalous behavior, and documenting a full investigative verdict — mirroring the actual workflow of a SOC analyst.
 
